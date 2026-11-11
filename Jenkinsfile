@@ -26,7 +26,15 @@ pipeline {
         '''
       }
     } }
-    stage('Deploy') { when { branch 'main' } steps {
+    stage('Deploy') {
+    when {
+        branch 'main'
+    }
+    steps {
+        echo 'Deploying application...'
+
+        // Add your deployment commands here
+    }
       sshagent(credentials: ['candystore-ec2-ssh']) {
         sh 'scp docker-compose.yml nginx/nginx.conf ec2-user@${DEPLOY_HOST}:/opt/candystore/ && ssh ec2-user@${DEPLOY_HOST} "cd /opt/candystore && docker compose pull && docker compose up -d"'
       }
