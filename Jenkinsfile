@@ -23,24 +23,32 @@ stage('Push ECR') {
         ]) {
             sh '''
                 set +x
+
                 export AWS_DEFAULT_REGION=ap-south-1
 
-                aws sts get-caller-identity
+                REGISTRY=716397954656.dkr.ecr.ap-south-1.amazonaws.com
+                TAG=${BUILD_NUMBER}
 
                 aws ecr get-login-password \
                   --region ap-south-1 | \
                   docker login \
                   --username AWS \
-                  --password-stdin \
-                  716397954656.dkr.ecr.ap-south-1.amazonaws.com
+                  --password-stdin $REGISTRY
 
-                docker push 716397954656.dkr.ecr.ap-south-1.amazonaws.com/candy-user:5
-                docker push 716397954656.dkr.ecr.ap-south-1.amazonaws.com/candy-product:5
-                docker push 716397954656.dkr.ecr.ap-south-1.amazonaws.com/candy-order:5
+                echo "Pushing Docker images with tag: $TAG"
+
+                docker tag local/candy-user:$TAG $REGISTRY/candy-user:$TAG
+                docker tag local/candy-product:$TAG $REGISTRY/candy-product:$TAG
+                docker tag local/candy-order:$TAG $REGISTRY/candy-order:$TAG
+
+                docker push $REGISTRY/candy-user:$TAG
+                docker push $REGISTRY/candy-product:$TAG
+                docker push $REGISTRY/candy-order:$TAG
             '''
         }
     }
 }
+
 
    stage('Deploy') {
     when {
