@@ -64,7 +64,7 @@ stage('Deploy') {
 
                 REGISTRY=716397954656.dkr.ecr.ap-south-1.amazonaws.com
                 TAG=${BUILD_NUMBER}
-                EC2_HOST=YOUR_ACTUAL_EC2_PUBLIC_IP
+                EC2_HOST=13.201.23.71
 
                 ssh -i "$SSH_KEY" \
                     -o StrictHostKeyChecking=no \
