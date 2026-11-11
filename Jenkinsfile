@@ -50,22 +50,41 @@ stage('Push ECR') {
 }
 
 
-   stage('Deploy') {
-    when {
-        branch 'main'
-    }
-
+  
+stage('Deploy') {
     steps {
-        sshagent(['ec2-ssh-key']) {
+        withCredentials([
+            sshUserPrivateKey(
+                credentialsId: 'ec2-ssh-key',
+                keyFileVariable: 'SSH_KEY',
+                usernameVariable: 'SSH_USER'
+            )
+        ]) {
             sh '''
-                ssh -o StrictHostKeyChecking=no ubuntu@YOUR_EC2_PUBLIC_IP "
-                    echo 'Connected to EC2 successfully'
-                    docker --version
-                "
+                set +x
+
+                REGISTRY=716397954656.dkr.ecr.ap-south-1.amazonaws.com
+                TAG=${BUILD_NUMBER}
+                EC2_HOST=YOUR_EC2_PUBLIC_IP
+
+                ssh -i "$SSH_KEY" \
+                    -o StrictHostKeyChecking=no \
+                    "$SSH_USER@$EC2_HOST" \
+                    "
+                    aws ecr get-login-password \
+                      --region ap-south-1 |
+                    sudo docker login \
+                      --username AWS \
+                      --password-stdin $REGISTRY
+
+                    sudo docker pull $REGISTRY/candy-user:$TAG
+                    sudo docker pull $REGISTRY/candy-product:$TAG
+                    sudo docker pull $REGISTRY/candy-order:$TAG
+                    "
             '''
         }
     }
 } }
-  }
+}
   post { always { sh 'docker compose down --remove-orphans || true' } 
 }
