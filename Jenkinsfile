@@ -51,6 +51,9 @@ stage('Push ECR') {
 
 
 stage('Deploy') {
+    when {
+        branch 'main'
+    }
     steps {
         withCredentials([
             sshUserPrivateKey(
@@ -69,12 +72,24 @@ stage('Deploy') {
                 ssh -i "$SSH_KEY" \
                     -o StrictHostKeyChecking=no \
                     "$SSH_USER@$EC2_HOST" "
+                        set -e
+                        cd /tmp/candy-microservice
+
                         aws ecr get-login-password --region ap-south-1 |
                         sudo docker login --username AWS --password-stdin $REGISTRY
 
-                        sudo docker pull $REGISTRY/candy-user:$TAG
-                        sudo docker pull $REGISTRY/candy-product:$TAG
-                        sudo docker pull $REGISTRY/candy-order:$TAG
+                        export ECR_REGISTRY=$REGISTRY
+                        export IMAGE_TAG=$TAG
+
+                        sudo -E docker compose pull
+                        sudo -E docker compose up -d --no-build
+
+                        sudo docker compose ps
+
+                        curl -f http://localhost/health
+                        curl -f http://localhost/users/health/
+                        curl -f http://localhost/products/health/
+                        curl -f http://localhost/orders/health/
                     "
             '''
         }
