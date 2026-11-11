@@ -13,19 +13,52 @@ pipeline {
     stage('Local smoke test') { steps {
       sh 'docker compose up -d --build; sleep 15; curl -fsS http://localhost/health; curl -fsS http://localhost/users/health/; docker compose down'
     } }
-    stage('Push ECR') { steps {
-      withAWS(credentials: 'aws-cred', region: "${AWS_REGION}") {
-        sh '''
-          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-          REGISTRY=$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
-          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $REGISTRY
-          for name in candy-user candy-product candy-order; do
-            docker tag $name:${IMAGE_TAG} $REGISTRY/$name:${IMAGE_TAG}
-            docker push $REGISTRY/$name:${IMAGE_TAG}
-          done
-        '''
-      }
-    } }
+   
+stage('Push ECR') {
+    steps {
+        withCredentials([
+            string(
+                credentialsId: 'aws-access-key',
+                variable: 'AWS_ACCESS_KEY_ID'
+            ),
+            string(
+                credentialsId: 'aws-secret-key',
+                variable: 'AWS_SECRET_ACCESS_KEY'
+            )
+        ]) {
+            sh '''
+                set +x
+
+                export AWS_DEFAULT_REGION=ap-south-1
+
+                aws sts get-caller-identity
+
+                aws ecr get-login-password \
+                  --region ap-south-1 | \
+                  docker login \
+                  --username AWS \
+                  --password-stdin \
+                  716397954656.dkr.ecr.ap-south-1.amazonaws.com
+
+                docker tag candy-user:5 \
+                  716397954656.dkr.ecr.ap-south-1.amazonaws.com/candy-user:5
+
+                docker tag candy-product:5 \
+                  716397954656.dkr.ecr.ap-south-1.amazonaws.com/candy-product:5
+
+                docker tag candy-order:5 \
+                  716397954656.dkr.ecr.ap-south-1.amazonaws.com/candy-order:5
+
+                docker push 716397954656.dkr.ecr.ap-south-1.amazonaws.com/candy-user:5
+
+                docker push 716397954656.dkr.ecr.ap-south-1.amazonaws.com/candy-product:5
+
+                docker push 716397954656.dkr.ecr.ap-south-1.amazonaws.com/candy-order:5
+            '''
+        }
+    }
+}
+
    stage('Deploy') {
     when {
         branch 'main'
