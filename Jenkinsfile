@@ -40,5 +40,5 @@ pipeline {
       }
     } }
   }
-  post { always { sh 'docker compose down --remove-orphans || true' } }
+  post { always { sh 'docker compose down --remove-orphans || true' } 
 }
