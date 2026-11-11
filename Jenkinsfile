@@ -50,7 +50,6 @@ stage('Push ECR') {
 }
 
 
-  
 stage('Deploy') {
     steps {
         withCredentials([
@@ -65,21 +64,17 @@ stage('Deploy') {
 
                 REGISTRY=716397954656.dkr.ecr.ap-south-1.amazonaws.com
                 TAG=${BUILD_NUMBER}
-                EC2_HOST=YOUR_EC2_PUBLIC_IP
+                EC2_HOST=YOUR_ACTUAL_EC2_PUBLIC_IP
 
                 ssh -i "$SSH_KEY" \
                     -o StrictHostKeyChecking=no \
-                    "$SSH_USER@$EC2_HOST" \
-                    "
-                    aws ecr get-login-password \
-                      --region ap-south-1 |
-                    sudo docker login \
-                      --username AWS \
-                      --password-stdin $REGISTRY
+                    "$SSH_USER@$EC2_HOST" "
+                        aws ecr get-login-password --region ap-south-1 |
+                        sudo docker login --username AWS --password-stdin $REGISTRY
 
-                    sudo docker pull $REGISTRY/candy-user:$TAG
-                    sudo docker pull $REGISTRY/candy-product:$TAG
-                    sudo docker pull $REGISTRY/candy-order:$TAG
+                        sudo docker pull $REGISTRY/candy-user:$TAG
+                        sudo docker pull $REGISTRY/candy-product:$TAG
+                        sudo docker pull $REGISTRY/candy-order:$TAG
                     "
             '''
         }
