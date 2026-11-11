@@ -18,11 +18,11 @@ stage('Push ECR') {
     steps {
         withCredentials([
             string(
-                credentialsId: 'aws-access-key',
+                credentialsId: 'aws-cred',
                 variable: 'AWS_ACCESS_KEY_ID'
             ),
             string(
-                credentialsId: 'aws-secret-key',
+                credentialsId: 'aws-cred',
                 variable: 'AWS_SECRET_ACCESS_KEY'
             )
         ]) {
