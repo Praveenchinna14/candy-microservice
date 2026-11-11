@@ -14,7 +14,7 @@ pipeline {
       sh 'docker compose up -d --build; sleep 15; curl -fsS http://localhost/health; curl -fsS http://localhost/users/health/; docker compose down'
     } }
     stage('Push ECR') { steps {
-      withAWS(credentials: 'aws-jenkins-credentials', region: "${AWS_REGION}") {
+      withAWS(credentials: 'aws-cred', region: "${AWS_REGION}") {
         sh '''
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           REGISTRY=$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
