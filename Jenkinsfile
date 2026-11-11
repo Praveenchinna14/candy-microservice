@@ -26,19 +26,22 @@ pipeline {
         '''
       }
     } }
-    stage('Deploy') {
+   stage('Deploy') {
     when {
         branch 'main'
     }
-    steps {
-        echo 'Deploying application...'
 
-        // Add your deployment commands here
+    steps {
+        sshagent(['ec2-ssh-key']) {
+            sh '''
+                ssh -o StrictHostKeyChecking=no ubuntu@YOUR_EC2_PUBLIC_IP "
+                    echo 'Connected to EC2 successfully'
+                    docker --version
+                "
+            '''
+        }
     }
-      sshagent(credentials: ['candystore-ec2-ssh']) {
-        sh 'scp docker-compose.yml nginx/nginx.conf ec2-user@${DEPLOY_HOST}:/opt/candystore/ && ssh ec2-user@${DEPLOY_HOST} "cd /opt/candystore && docker compose pull && docker compose up -d"'
-      }
-    } }
+} }
   }
   post { always { sh 'docker compose down --remove-orphans || true' } 
 }
