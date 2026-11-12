@@ -75,72 +75,88 @@ pipeline {
             }
         }
 
-        stage('Deploy') {
-            when {
-                branch 'main'
-            }
+        
+stage('Deploy') {
+    when {
+        branch 'main'
+    }
 
-            steps {
-                withCredentials([
-                    sshUserPrivateKey(
-                        credentialsId: 'ssh-cred',
-                        keyFileVariable: 'SSH_KEY',
-                        usernameVariable: 'SSH_USER'
-                    )
-                ]) {
-                    sh '''
-                        set +x
+    steps {
+        withCredentials([
+            sshUserPrivateKey(
+                credentialsId: 'ssh-cred',
+                keyFileVariable: 'SSH_KEY',
+                usernameVariable: 'SSH_USER'
+            )
+        ]) {
+            sh '''
+                set -e
+                set +x
 
-                        EC2_HOST=13.201.76.148
+                EC2_HOST=13.201.76.148
+                DEPLOY_DIR=/tmp/candy-microservice
 
-                        ssh -i "$SSH_KEY" \
-                            -o StrictHostKeyChecking=no \
-                            "$SSH_USER@$EC2_HOST" "
-                                set -e
+                echo "Creating deployment directory on EC2"
 
-                                cd /tmp/candy-microservice
+                ssh -i "$SSH_KEY" \
+                    -o StrictHostKeyChecking=no \
+                    "$SSH_USER@$EC2_HOST" \
+                    "mkdir -p $DEPLOY_DIR/nginx"
 
-                                echo 'Logging in to AWS ECR'
+                echo "Copying deployment files to EC2"
 
-                                aws ecr get-login-password \
-                                  --region ap-south-1 |
-                                  sudo docker login \
-                                  --username AWS \
-                                  --password-stdin ${ECR_REGISTRY}
+                scp -i "$SSH_KEY" \
+                    -o StrictHostKeyChecking=no \
+                    docker-compose.yml \
+                    "$SSH_USER@$EC2_HOST:$DEPLOY_DIR/"
 
-                                echo 'Deploying image tag: ${IMAGE_TAG}'
+                scp -i "$SSH_KEY" \
+                    -o StrictHostKeyChecking=no \
+                    nginx/nginx.conf \
+                    "$SSH_USER@$EC2_HOST:$DEPLOY_DIR/nginx/"
 
-                                sudo env \
-                                  ECR_REGISTRY=${ECR_REGISTRY} \
-                                  IMAGE_TAG=${IMAGE_TAG} \
-                                  docker compose pull
+                echo "Deploying image tag: ${IMAGE_TAG}"
 
-                                sudo env \
-                                  ECR_REGISTRY=${ECR_REGISTRY} \
-                                  IMAGE_TAG=${IMAGE_TAG} \
-                                  docker compose up -d --no-build
+                ssh -i "$SSH_KEY" \
+                    -o StrictHostKeyChecking=no \
+                    "$SSH_USER@$EC2_HOST" "
+                        set -e
 
-                                echo 'Checking containers'
+                        cd $DEPLOY_DIR
 
-                                sudo docker compose ps
+                        echo 'Logging into AWS ECR'
 
-                                echo 'Checking application health'
+                        aws ecr get-login-password \
+                          --region ${AWS_REGION} |
+                          sudo docker login \
+                          --username AWS \
+                          --password-stdin ${ECR_REGISTRY}
 
-                                curl -f http://localhost/health
+                        echo 'Pulling latest application images'
 
-                                curl -f http://localhost/users/health/
+                        sudo env \
+                          ECR_REGISTRY=${ECR_REGISTRY} \
+                          IMAGE_TAG=${IMAGE_TAG} \
+                          docker compose pull
 
-                                curl -f http://localhost/products/health/
+                        echo 'Starting CandyStore containers'
 
-                                curl -f http://localhost/orders/health/
+                        sudo env \
+                          ECR_REGISTRY=${ECR_REGISTRY} \
+                          IMAGE_TAG=${IMAGE_TAG} \
+                          docker compose up -d --no-build
 
-                                echo 'Deployment successful'
-                            "
-                    '''
-                }
-            }
+                        echo 'Checking container status'
+
+                        sudo docker compose ps
+
+                        echo 'Deployment completed'
+                    "
+            '''
         }
     }
+}
+  }
 
     post {
         success {
