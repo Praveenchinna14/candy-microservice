@@ -91,7 +91,7 @@ pipeline {
                     sh '''
                         set +x
 
-                        EC2_HOST=13.201.23.71
+                        EC2_HOST=13.201.76.148
 
                         ssh -i "$SSH_KEY" \
                             -o StrictHostKeyChecking=no \
